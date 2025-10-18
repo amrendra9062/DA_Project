@@ -26,34 +26,40 @@
     #save-interests { margin-top: 10px; }
   </style>
 </head>
-
 <body>
-  <!-- Navbar -->
   <div class="navbar-custom">
     <div class="left">Hi, {{ user.name }}</div>
     <div class="center">Welcome to <b>KGP Connect</b></div>
     <div class="right">
       <button id="interest-btn" class="btn-custom">My Interests</button>
+      <a href="/logout" class="btn btn-danger btn-sm ms-2">Logout</a>
     </div>
   </div>
 
-  <!-- Feed -->
   <div class="container">
     <div class="row">
       <div class="col-md-8">
         <div class="card shadow mb-3">
           <div class="card-body">
-            <h5 class="card-title">Your Timeline</h5>
-            <p class="card-text"></p>
+            <h5 class="card-title">Your Feed</h5>
+            <p class="card-text">This is where posts or updates from your friends will appear.</p>
           </div>
         </div>
-      </div>
+
+        <div class="card shadow mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Connect with Others</h5>
+            <p class="card-text">Find other students on the platform and start a conversation.</p>
+            <a href="/users" class="btn btn-success">Find Users</a>
+          </div>
+        </div>
+        </div>
       <div class="col-md-4">
         <div class="card shadow mb-3">
           <div class="card-body">
             <h5 class="card-title">Quick Interests</h5>
             <div class="interest-tags">
-              {% set selected_interests = user.interests.split(',')|map('trim')|list %}
+              {% set selected_interests = user.interests.split(',')|map('trim')|list if user.interests else [] %}
               {% for interest in selected_interests %}
                 {% if interest %}
                   <span>{{ interest }}</span>
@@ -66,7 +72,6 @@
     </div>
   </div>
 
-  <!-- Modal -->
   <div id="interest-modal" class="modal">
     <div class="modal-content">
       <span id="close">&times;</span>
@@ -80,6 +85,7 @@
           "Tech / Coding","AI & ML","Data Science","Startups","Finance & Investing",
           "Philosophy","Meditation / Yoga","Debating","Movies Discussion","Carrom / Chess"
         ] %}
+        {% set selected_interests = user.interests.split(',')|map('trim')|list if user.interests else [] %}
         {% for interest in all_interests %}
           <div class="interest-box {% if interest in selected_interests %}selected{% endif %}" data-interest="{{ interest }}">{{ interest }}</div>
         {% endfor %}
@@ -115,12 +121,15 @@
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({interests: selected}),
-        credentials: 'same-origin'
-      }).then(() => {
-        window.location.reload();
+        credentials: 'same-origin' // Important: sends cookies with the request
+      }).then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert("Failed to save interests.");
+        }
       });
     });
   </script>
 </body>
 </html>
-
