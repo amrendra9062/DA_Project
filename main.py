@@ -1,83 +1,119 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Form, Cookie, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import sqlite3
+from sqlalchemy.orm import Session
+import secrets
+from typing import List
 
+from database import SessionLocal, engine, Base
+from models import User
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
+# FastAPI setup
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-def get_db_connection():
-    conn = sqlite3.connect("users.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+# Dependency to get DB session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ----------------- ROUTES -----------------
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/check_email")
-async def check_email(request: Request, email: str = Form(...)):
-    conn = get_db_connection()
-    existing = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-    conn.close()
+async def check_email(email: str = Form(...), db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         return RedirectResponse(url=f"/login?email={email}", status_code=303)
     return RedirectResponse(url=f"/register?email={email}", status_code=303)
 
 @app.get("/register", response_class=HTMLResponse)
-async def register_form(request: Request, email: str):
+async def register_form(request: Request, email: str = ""):
     return templates.TemplateResponse("register.html", {"request": request, "email": email})
 
 @app.post("/register")
 async def register_user(
-    request: Request,
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
     department: str = Form(...),
     bio: str = Form(...),
-    interests: str = Form(...)
+    interests: List[str] = Form(default=[]),
+    db: Session = Depends(get_db)
 ):
-    conn = get_db_connection()
-    conn.execute(
-        "INSERT INTO users (name, email, password, department, bio, interests) VALUES (?, ?, ?, ?, ?, ?)",
-        (name, email, password, department, bio, interests)
+    interests_str = ", ".join(interests)
+    token = secrets.token_urlsafe(16)
+
+    user = User(
+        name=name,
+        email=email,
+        password=password,
+        department=department,
+        bio=bio,
+        interests=interests_str,
+        session_token=token
     )
-    conn.commit()
-    conn.close()
-    return RedirectResponse(url=f"/home?email={email}", status_code=303)
+    db.add(user)
+    db.commit()
+
+    response = RedirectResponse(url="/home", status_code=303)
+    response.set_cookie(key="session_token", value=token, httponly=True)
+    return response
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, email: str = ""):
     return templates.TemplateResponse("login.html", {"request": request, "email": email})
 
 @app.post("/login")
-async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
-    conn = get_db_connection()
-    user = conn.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password)).fetchone()
-    conn.close()
+async def login_user(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email, User.password == password).first()
     if user:
-        return RedirectResponse(url=f"/home?email={email}", status_code=303)
+        token = secrets.token_urlsafe(16)
+        user.session_token = token
+        db.commit()
+        response = RedirectResponse(url="/home", status_code=303)
+        response.set_cookie(key="session_token", value=token, httponly=True)
+        return response
     return HTMLResponse("Invalid credentials. <a href='/'>Try again</a>")
 
 @app.get("/home", response_class=HTMLResponse)
-async def home(request: Request, email: str):
-    conn = get_db_connection()
-    user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-    conn.close()
+async def home(request: Request, session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    if not session_token:
+        return RedirectResponse(url="/")
+    user = db.query(User).filter(User.session_token == session_token).first()
+    if not user:
+        return RedirectResponse(url="/")
     return templates.TemplateResponse("home.html", {"request": request, "user": user})
 
-@app.post("/add_interest")
-async def add_interest(email: str = Form(...), new_interest: str = Form(...)):
-    conn = get_db_connection()
-    user = conn.execute("SELECT interests FROM users WHERE email=?", (email,)).fetchone()
+@app.post("/update_interests")
+async def update_interests(interests: dict = {}, session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    if not session_token:
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user = db.query(User).filter(User.session_token == session_token).first()
     if user:
-        current = user["interests"] or ""
-        updated = (current + ", " + new_interest) if current else new_interest
-        conn.execute("UPDATE users SET interests=? WHERE email=?", (updated, email))
-        conn.commit()
-    conn.close()
-    return RedirectResponse(url=f"/home?email={email}", status_code=303)
+        user.interests = ", ".join(interests.get("interests", []))
+        db.commit()
+    return JSONResponse({"status": "success"})
+
+@app.get("/logout")
+async def logout(session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    if session_token:
+        user = db.query(User).filter(User.session_token == session_token).first()
+        if user:
+            user.session_token = None
+            db.commit()
+    response = RedirectResponse(url="/")
+    response.delete_cookie("session_token")
+    return response
 

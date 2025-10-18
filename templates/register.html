@@ -20,23 +20,80 @@
       }
     }
   </script>
+
+  <style>
+    .interests-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+    }
+    .interest-box {
+      background: #f1f3f4;
+      border-radius: 8px;
+      padding: 6px 8px;
+      transition: 0.2s;
+      font-size: 14px;
+    }
+    .interest-box:hover {
+      background: #007bff;
+      color: white;
+    }
+  </style>
 </head>
+
 <body class="bg-light">
   <div class="container mt-5">
-    <div class="card shadow p-4 mx-auto" style="max-width: 500px;">
+    <div class="card shadow p-4 mx-auto" style="max-width: 600px;">
       <h3 class="text-center mb-3">Register</h3>
 
       <form method="POST" action="/register">
-        <div class="mb-3"><label>Name</label><input name="name" class="form-control" required /></div>
         <div class="mb-3">
-          <label>Email</label>
+          <label class="form-label">Name</label>
+          <input name="name" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Email</label>
           <input id="email" name="email" class="form-control" oninput="validateEmail()" required />
           <small id="warning" class="text-danger"></small>
         </div>
-        <div class="mb-3"><label>Password</label><input type="password" name="password" class="form-control" required /></div>
-        <div class="mb-3"><label>Department</label><input name="department" class="form-control" required /></div>
-        <div class="mb-3"><label>Bio</label><textarea name="bio" class="form-control" rows="2"></textarea></div>
-        <div class="mb-3"><label>Interests (comma separated)</label><input name="interests" class="form-control" /></div>
+
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Department</label>
+          <input name="department" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Bio</label>
+          <textarea name="bio" class="form-control" rows="2" placeholder="Tell something about yourself..."></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Select Your Interests</label>
+          <div class="interests-container">
+            {% for interest in [
+              "Watching Movies", "Watching Anime", "Playing Cricket", "Playing Football", "Playing Tennis",
+              "Gym & Fitness", "Running / Jogging", "Badminton", "Cycling", "Hiking / Trekking",
+              "Gaming", "Reading Books", "Writing", "Music Listening", "Singing / Instrument",
+              "Dancing", "Photography", "Art & Design", "Cooking / Baking", "Volunteering",
+              "Tech / Coding", "AI & ML", "Data Science", "Startups", "Finance & Investing",
+              "Philosophy", "Meditation / Yoga", "Debating", "Movies Discussion", "Carrom / Chess"
+            ] %}
+              <label class="interest-box">
+                <input type="checkbox" name="interests" value="{{ interest }}" />
+                {{ interest }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
         <button id="submitBtn" type="submit" class="btn btn-primary w-100">Register</button>
       </form>
 
