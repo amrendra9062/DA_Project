@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>KGP Connect - Home</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="navbar">
+    <div class="left">Hi, {{ user.name }}</div>
+    <div class="center">Welcome to <b>KGP Connect</b></div>
+    <div class="right">
+      <button id="interest-btn">My Interests</button>
+    </div>
+  </div>
+
+  <div id="interest-modal" class="modal">
+    <div class="modal-content">
+      <span id="close">&times;</span>
+      <h2>Your Interests</h2>
+      <p>{{ user.interests }}</p>
+
+      <form action="/add_interest" method="post">
+        <input type="hidden" name="email" value="{{ user.email }}">
+        <input type="text" name="new_interest" placeholder="Add new interest" required>
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('interest-modal');
+    const btn = document.getElementById('interest-btn');
+    const span = document.getElementById('close');
+
+    btn.onclick = () => modal.style.display = 'block';
+    span.onclick = () => modal.style.display = 'none';
+    window.onclick = e => { if (e.target == modal) modal.style.display = 'none'; }
+  </script>
+</body>
+</html>
+
