@@ -134,6 +134,43 @@ async def get_users_list(request: Request, session_token: str = Cookie(None), db
     
     return templates.TemplateResponse("users.html", {"request": request, "users": all_users})
 
+@app.get("/search", response_class=HTMLResponse)
+async def search_users(
+    request: Request,
+    q: str = "",
+    session_token: str = Cookie(None),
+    db: Session = Depends(get_db)
+):
+    """Search for users based on interests or name."""
+    if not session_token:
+        return RedirectResponse(url="/")
+
+    current_user = db.query(User).filter(User.session_token == session_token).first()
+    if not current_user:
+        return RedirectResponse(url="/")
+
+    if not q.strip():
+        results = []
+    else:
+        # Search by name or interests (case-insensitive)
+        results = db.query(User).filter(
+            User.id != current_user.id,
+            or_(
+                User.name.ilike(f"%{q}%"),
+                User.interests.ilike(f"%{q}%")
+            )
+        ).all()
+
+    return templates.TemplateResponse(
+        "search.html",
+        {
+            "request": request,
+            "user": current_user,
+            "query": q,
+            "results": results
+        }
+    )
+
 
 #Added by Utkarsh (Route for chat)
 @app.get("/chat/{receiver_id}", response_class=HTMLResponse)
