@@ -7,7 +7,7 @@ A private social network for students featuring user registration and real-time 
 
 1.  Install the required libraries:
     ```bash
-    pip install -r requirements.txt
+    pip install -r requirement.txt
     ```
 
 2.  Run the server:

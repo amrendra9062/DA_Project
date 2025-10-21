@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/glassMorph.css">
+</head>
+
+<body style="background-image: url(/static/IITKGP.jpg); background-size: cover;">
+    <center>
+        <h1>Search Users</h1>
+
+        <div class="glass-card">
+            <form action="/search" method="get">
+                <input style="background-color: rgb(252, 238, 171); font-size: 20; border-radius: 10px;" type="text" name="q" placeholder="Search by interest or name" value="{{ query }}" />
+                <br>
+                <button type="submit">Search</button>
+            </form>
+            {% if query %}
+            <h3>Results for "{{ query }}"</h3>
+            {% if results %}
+            <ul>
+                {% for u in results %}
+                <li>
+                    <a href="/chat/{{ u.id }}">{{ u.name }}</a> – Interests: {{ u.interests }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No matching users found.</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </center>
+</body>
